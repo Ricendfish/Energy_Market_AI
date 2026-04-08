@@ -1,0 +1,17 @@
+pandas
+numpy
+scikit-learn
+xgboost
+requests
+yfinance
+fastapi
+uvicorn
+streamlit
+matplotlib
+seaborn
+python-dotenv
+meteostat
+pandas
+requests
+scikit-learn
+joblib
