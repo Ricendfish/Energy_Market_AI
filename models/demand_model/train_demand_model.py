@@ -33,6 +33,14 @@ model.fit(X_train, y_train)
 # predictions
 preds = model.predict(X_test)
 
+import matplotlib.pyplot as plt
+
+plt.scatter(y_test, preds)
+plt.xlabel("Actual Demand")
+plt.ylabel("Predicted Demand")
+plt.title("Actual vs Predicted Electricity Demand")
+plt.show()
+
 # evaluation
 mae = mean_absolute_error(y_test, preds)
 

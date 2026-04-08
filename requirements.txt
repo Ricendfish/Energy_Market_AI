@@ -15,3 +15,4 @@ pandas
 requests
 scikit-learn
 joblib
+plotly
