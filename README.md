@@ -1,101 +1,108 @@
-# ⚡ Energy Market Intelligence System
+# ⚡ AI Electricity Cost Optimizer
 
-This project is a **Data Engineering and Machine Learning Operations (MLOps)** pipeline that predicts:
+An end-to-end data science application that analyzes electricity market data and predicts optimal times to use electricity based on price trends and weather conditions.
 
-• Electricity demand from weather conditions  
-• Electricity prices from predicted demand  
-• Market insights for major energy companies  
+## 🌐 Live Dashboard
 
-The system integrates **data pipelines, machine learning models, and an interactive dashboard** to analyze how weather impacts the energy market.
+Access the live application here:
 
----
+https://energymarketai-mdlpk9mvffqevtw5prxpum.streamlit.app/
 
-# 🌐 Live Dashboard
+The dashboard allows users to:
 
-Access the deployed dashboard here:
+* View historical electricity market data
+* Explore energy demand and price trends
+* Analyze the relationship between weather and electricity demand
+* Predict electricity prices for selected dates
+* Identify the cheapest hours to run appliances
 
-👉 https://energymarketai-mdlpk9mvffqevtw5prxpum.streamlit.app/
+## 📊 Project Overview
 
-The dashboard provides:
+Electricity prices fluctuate depending on market demand, weather conditions, and generation sources. This project builds a machine learning pipeline to analyze these patterns and provide actionable insights for electricity consumption.
 
-• Weather simulation inputs  
-• Electricity demand prediction  
-• Electricity price forecasting  
-• Market indicators  
-• Energy company stock comparisons  
-• Data analysis visualizations  
+The system integrates real-time market data, weather information, and machine learning models to help users optimize their electricity usage.
 
----
+## ⚙️ System Architecture
 
-# 📊 Dashboard Features
+```
+Electricity Market Data + Weather Data
+                 ↓
+           Data Pipeline
+                 ↓
+       Feature Engineering
+                 ↓
+      Machine Learning Models
+                 ↓
+        Optimization Engine
+                 ↓
+        Streamlit Dashboard
+```
 
-### Weather Simulation
-Users can adjust:
+## 🤖 Machine Learning Pipeline
 
-- Temperature
-- Wind Speed
-- Month
+The automated pipeline performs:
 
-These inputs simulate weather conditions that influence electricity demand.
+1. Data ingestion from electricity market APIs and weather sources
+2. Data cleaning and preprocessing
+3. Feature engineering (seasonality, weather indicators, time variables)
+4. Model training and evaluation
+5. Electricity price prediction
 
----
+The pipeline is automated using **GitHub Actions**, allowing the model to update regularly.
 
-### Energy Demand Forecast
+## 📈 Dashboard Features
 
-A **Random Forest model** predicts electricity demand using:
+* Electricity price trend analysis
+* Demand vs electricity price exploration
+* Weather impact on electricity demand
+* Price prediction for selected dates
+* Appliance usage optimization recommendations
 
-- Temperature
-- Wind speed
-- Day of week
-- Month
-- Day of year
+## 🐳 Docker Deployment
 
----
+The project is containerized using Docker.
 
-### Electricity Price Prediction
+Build the image:
 
-Electricity prices are predicted using:
+```
+docker build -t energy-ai:1.0 .
+```
 
-- Weather conditions
-- Predicted electricity demand
+Run the container:
 
-This demonstrates the **economic relationship between weather, demand, and energy pricing**.
+```
+docker run --name energy-ai-demo -p 8501:8501 energy-ai:1.0
+```
 
----
+Then open:
 
-### Market Indicators
+```
+http://localhost:8501
+```
 
-The dashboard includes **Bloomberg-style indicators**:
+## 🔄 Automation
 
-- Predicted electricity demand
-- Predicted electricity price
-- Market signal (Bullish / Weak energy market)
+A scheduled **GitHub Actions workflow** runs the machine learning pipeline automatically to:
 
-These indicators help interpret potential market trends.
+* Fetch updated data
+* Retrain the model
+* Refresh predictions
 
----
+## 🧰 Tech Stack
 
-### Energy Company Market Comparison
+* Python
+* Streamlit
+* Pandas
+* Scikit-learn
+* XGBoost
+* Plotly
+* Meteostat Weather API
+* Docker
+* GitHub Actions
 
-The dashboard visualizes stock performance of major energy companies:
+## 👨‍💻 Author
 
-Renewable Energy Companies
+**Asalun Hye Arnob**
 
-- Ørsted
-- Vestas Wind Systems
-- Siemens Energy
-- Iberdrola
-
-Integrated Energy Companies
-
-- Equinor
-- TotalEnergies
-- Shell
-- BP
-
-Stock data is retrieved using the **Yahoo Finance API**.
-
----
-
-
-
+MSc Business Data Science
+Energy Market AI Project
