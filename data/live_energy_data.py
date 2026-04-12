@@ -3,11 +3,14 @@ import pandas as pd
 from datetime import datetime
 
 
-def fetch_nordpool_prices():
+def get_live_electricity_price():
 
     url = "https://api.energy-charts.info/price?bzn=DK1"
 
     response = requests.get(url)
+
+    print("Status code:", response.status_code)
+
     data = response.json()
 
     timestamps = data["unix_seconds"]
@@ -16,6 +19,7 @@ def fetch_nordpool_prices():
     rows = []
 
     for t, p in zip(timestamps, prices):
+
         rows.append({
             "timestamp": datetime.utcfromtimestamp(t),
             "price_dkk": p / 1000
@@ -28,8 +32,7 @@ def fetch_nordpool_prices():
 
 if __name__ == "__main__":
 
-    df = fetch_nordpool_prices()
-    df.to_csv("data/nordpool_prices.csv", index=False)
+    df = get_live_electricity_price()
 
-
-    print(df.head())
+    print("\nLatest electricity prices:\n")
+    print(df.tail(10))

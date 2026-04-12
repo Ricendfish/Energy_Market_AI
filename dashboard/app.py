@@ -1,230 +1,269 @@
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import streamlit as st
 import pandas as pd
-import joblib
-import yfinance as yf
 import plotly.express as px
-import plotly.graph_objects as go
+import joblib
+from datetime import date, timedelta
 
-st.set_page_config(page_title="Energy Market Intelligence", layout="wide")
+from optimization.energy_optimizer import find_cheapest_hours
+from data.live_energy_data import get_live_electricity_price
+from data.live_weather import get_weather_features
 
-st.title("⚡ Energy Market Intelligence Dashboard")
 
-st.markdown(
-"""
-Machine Learning + Data Engineering pipeline for predicting **energy demand,
-electricity prices, and market insights for energy companies**.
-"""
+# ---------------------------------------------------
+# PAGE CONFIG
+# ---------------------------------------------------
+
+st.set_page_config(
+    page_title="AI Electricity Optimizer",
+    layout="wide"
 )
 
-# -------------------------
+st.title("⚡ AI Electricity Cost Optimizer")
+
+st.caption(
+"Electricity prices sourced from the Nord Pool wholesale electricity market for Denmark."
+)
+
+
+# ---------------------------------------------------
 # LOAD DATA
-# -------------------------
+# ---------------------------------------------------
 
 df = pd.read_csv("data/final_dataset.csv")
+df["date"] = pd.to_datetime(df["date"])
 
-demand_model = joblib.load("models/demand_model/demand_model.pkl")
-price_model = joblib.load("models/price_model/price_model.pkl")
+model = joblib.load("models/electricity_price_model.pkl")
 
-avg_demand = df["electricity_demand"].mean()
-avg_price = df["electricity_price"].mean()
+live_prices = get_live_electricity_price()
 
-# -------------------------
-# WEATHER INPUT
-# -------------------------
+latest_live_price = live_prices["price_dkk"].iloc[-1]
 
-st.header("Weather Conditions")
 
-col1, col2, col3 = st.columns(3)
+# ---------------------------------------------------
+# NAVIGATION
+# ---------------------------------------------------
 
-temperature = col1.slider("Temperature (°C)", -10, 35, 10)
-wind_speed = col2.slider("Wind Speed (m/s)", 0, 20, 5)
-month = col3.slider("Month", 1, 12, 6)
+tab1, tab2, tab3, tab4 = st.tabs([
+    "Overview",
+    "Market Analysis",
+    "Prediction Tool",
+    "Optimization"
+])
 
-day_of_week = 2
-day_of_year = 180
 
-# -------------------------
-# MODEL FORECAST
-# -------------------------
+# ===================================================
+# OVERVIEW
+# ===================================================
 
-st.header("Energy Forecast")
+with tab1:
 
-if st.button("Run Forecast"):
+    st.header("Electricity Market Overview")
 
-    demand_features = [[
-        temperature,
-        wind_speed,
-        day_of_week,
-        month,
-        day_of_year
-    ]]
+    latest = df.iloc[-1:]
+    X_latest = latest.drop(columns=["electricity_price", "date"])
 
-    predicted_demand = demand_model.predict(demand_features)[0]
+    predicted_price = model.predict(X_latest)[0]
 
-    price_features = [[
-        temperature,
-        wind_speed,
-        day_of_week,
-        month,
-        day_of_year,
-        predicted_demand
-    ]]
+    demand = latest["electricity_demand"].values[0]
 
-    predicted_price = price_model.predict(price_features)[0]
+    col1, col2, col3 = st.columns(3)
 
-    # -------------------------
-    # BLOOMBERG STYLE METRICS
-    # -------------------------
-
-    st.subheader("Market Indicators")
-
-    c1, c2, c3 = st.columns(3)
-
-    c1.metric(
-        "Predicted Demand (MWh)",
-        round(predicted_demand,2),
-        round(predicted_demand-avg_demand,2)
+    col1.metric(
+        "⚡ Live Electricity Price",
+        f"{latest_live_price:.3f} DKK/kWh"
     )
 
-    c2.metric(
-        "Predicted Price (€)",
-        round(predicted_price,2),
-        round(predicted_price-avg_price,2)
+    col2.metric(
+        "📈 Predicted Tomorrow Price",
+        f"{predicted_price:.2f} DKK/kWh"
     )
 
-    if predicted_price > avg_price:
-        signal = "Bullish Energy Market"
-        color = "green"
+    col3.metric(
+        "🔌 Electricity Demand",
+        f"{demand:,.0f} MW"
+    )
+
+    st.subheader("Live Electricity Prices Today")
+
+    fig_live = px.line(
+        live_prices,
+        x="timestamp",
+        y="price_dkk",
+        labels={
+            "timestamp": "Time",
+            "price_dkk": "Price (DKK/kWh)"
+        }
+    )
+
+    st.plotly_chart(fig_live, use_container_width=True)
+
+
+# ===================================================
+# MARKET ANALYSIS
+# ===================================================
+
+with tab2:
+
+    st.header("Market Analysis")
+
+    st.subheader("Historical Electricity Prices")
+
+    fig_hist = px.line(
+        df,
+        x="date",
+        y="electricity_price",
+        labels={
+            "date": "Date",
+            "electricity_price": "Price (DKK/kWh)"
+        }
+    )
+
+    st.plotly_chart(fig_hist, use_container_width=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.subheader("Demand vs Electricity Price")
+
+        fig_demand = px.scatter(
+            df,
+            x="electricity_demand",
+            y="electricity_price",
+            opacity=0.6,
+            labels={
+                "electricity_demand": "Demand (MW)",
+                "electricity_price": "Price (DKK/kWh)"
+            }
+        )
+
+        st.plotly_chart(fig_demand, use_container_width=True)
+
+    with col2:
+
+        st.subheader("Temperature vs Electricity Price")
+
+        fig_temp = px.scatter(
+            df,
+            x="temperature",
+            y="electricity_price",
+            opacity=0.6,
+            labels={
+                "temperature": "Temperature (°C)",
+                "electricity_price": "Price (DKK/kWh)"
+            }
+        )
+
+        st.plotly_chart(fig_temp, use_container_width=True)
+
+
+# ===================================================
+# PREDICTION TOOL
+# ===================================================
+
+with tab3:
+
+    st.header("Electricity Price Prediction")
+
+    selected_date = st.date_input(
+        "Select prediction date",
+        min_value=date.today(),
+        max_value=date.today() + timedelta(days=7)
+    )
+
+    weather_features = get_weather_features(selected_date)
+
+    if weather_features is not None:
+
+        predicted = model.predict(weather_features)[0]
+
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric(
+            "Predicted Price",
+            f"{predicted:.2f} DKK/kWh"
+        )
+
+        col2.metric(
+            "Temperature",
+            f"{weather_features['temperature'].iloc[0]} °C"
+        )
+
+        col3.metric(
+            "Wind Speed",
+            f"{weather_features['wind_speed'].iloc[0]} km/h"
+        )
+
+        st.subheader("Model Input Features")
+
+        st.dataframe(weather_features)
+
     else:
-        signal = "Weak Energy Market"
-        color = "red"
 
-    c3.metric("Market Signal", signal)
+        st.warning("Weather data unavailable for this date.")
 
-    # -------------------------
-    # MARKET INSIGHT TEXT
-    # -------------------------
 
-    st.subheader("Market Insight")
+# ===================================================
+# OPTIMIZATION
+# ===================================================
 
-    if predicted_price > avg_price:
-        st.success(
-            "Electricity prices predicted ABOVE average. Renewable energy companies may benefit."
-        )
-    else:
-        st.warning(
-            "Electricity prices predicted BELOW average. Energy market conditions may weaken."
-        )
+with tab4:
 
-# -------------------------
-# DATA ANALYSIS
-# -------------------------
+    st.header("Cheapest Electricity Hours")
 
-st.header("Energy Data Analysis")
+    # Convert timestamp to hour
+    live_prices["hour"] = pd.to_datetime(live_prices["timestamp"]).dt.hour
 
-col1, col2 = st.columns(2)
+    hourly_prices = live_prices.groupby("hour")["price_dkk"].mean().reset_index()
 
-fig1 = px.scatter(
-    df,
-    x="temperature",
-    y="electricity_demand",
-    title="Temperature vs Electricity Demand"
-)
+    st.subheader("Hourly Electricity Prices")
 
-fig2 = px.scatter(
-    df,
-    x="electricity_demand",
-    y="electricity_price",
-    title="Demand vs Electricity Price"
-)
-
-col1.plotly_chart(fig1, use_container_width=True)
-col2.plotly_chart(fig2, use_container_width=True)
-
-# -------------------------
-# CORRELATION HEATMAP
-# -------------------------
-
-st.subheader("Feature Correlation")
-
-corr = df.corr(numeric_only=True)
-
-fig3 = px.imshow(
-    corr,
-    text_auto=True,
-    color_continuous_scale="Blues",
-    title="Correlation Heatmap"
-)
-
-st.plotly_chart(fig3, use_container_width=True)
-
-# -------------------------
-# ENERGY STOCK MARKET
-# -------------------------
-
-st.header("Energy Company Market Comparison")
-
-stocks = {
-    "Ørsted (Denmark)": "ORSTED.CO",
-    "Vestas Wind Systems": "VWS.CO",
-    "Siemens Energy": "ENR.DE",
-    "Iberdrola": "IBE.MC",
-    "Equinor": "EQNR",
-    "TotalEnergies": "TTE",
-    "Shell": "SHEL",
-    "BP": "BP"
-}
-
-companies = st.multiselect(
-    "Compare Energy Companies",
-    list(stocks.keys()),
-    default=["Ørsted (Denmark)", "Vestas Wind Systems"]
-)
-
-fig = go.Figure()
-
-for company in companies:
-
-    ticker = yf.Ticker(stocks[company])
-    data = ticker.history(period="6mo")
-
-    fig.add_trace(
-        go.Scatter(
-            x=data.index,
-            y=data["Close"],
-            mode="lines",
-            name=company
-        )
+    fig_hourly = px.bar(
+        hourly_prices,
+        x="hour",
+        y="price_dkk",
+        labels={
+            "hour": "Hour of Day",
+            "price_dkk": "Price (DKK/kWh)"
+        }
     )
 
-fig.update_layout(
-    title="Energy Company Stock Performance (6 Months)",
-    xaxis_title="Date",
-    yaxis_title="Stock Price"
-)
+    st.plotly_chart(fig_hourly, use_container_width=True)
 
-st.plotly_chart(fig, use_container_width=True)
+    # Find cheapest hours
+    cheapest = hourly_prices.nsmallest(3, "price_dkk")
 
-# -------------------------
-# DATASET PREVIEW
-# -------------------------
+    cheapest["hour"] = cheapest["hour"].apply(
+        lambda x: f"{(x % 12) or 12} {'AM' if x < 12 else 'PM'}"
+    )
 
-st.header("Dataset Preview")
+    st.subheader("Recommended Cheapest Hours")
 
-st.dataframe(df.head())
+    st.dataframe(cheapest)
 
-# -------------------------
-# FOOTER
-# -------------------------
+    # ---------------------------------------------------
+    # HEATMAP
+    # ---------------------------------------------------
 
-st.markdown("---")
+    st.subheader("Electricity Price Heatmap")
 
-st.markdown(
-"""
-**Project Pipeline**
+    heatmap_data = hourly_prices.pivot_table(
+        values="price_dkk",
+        columns="hour"
+    )
 
-Weather Data → Demand Prediction Model → Price Prediction Model → Energy Market Insight
+    fig_heatmap = px.imshow(
+        heatmap_data,
+        labels={
+            "x": "Hour of Day",
+            "y": "",
+            "color": "Price (DKK/kWh)"
+        }
+    )
 
-Built using **Python, Streamlit, Scikit-Learn, Plotly, and Financial APIs**
-"""
-)
+    st.plotly_chart(fig_heatmap, use_container_width=True)
