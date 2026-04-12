@@ -97,5 +97,5 @@ Stock data is retrieved using the **Yahoo Finance API**.
 
 ---
 
-# 🧠 Project Architecture
+
 
