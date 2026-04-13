@@ -100,9 +100,4 @@ A scheduled **GitHub Actions workflow** runs the machine learning pipeline autom
 * Docker
 * GitHub Actions
 
-## 👨‍💻 Author
 
-**Asalun Hye Arnob**
-
-MSc Business Data Science
-Energy Market AI Project
