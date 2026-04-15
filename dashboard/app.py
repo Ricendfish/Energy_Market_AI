@@ -38,8 +38,11 @@ model = joblib.load("models/electricity_price_model.pkl")
 
 live_prices = get_live_electricity_price()
 
-# live API already gives DKK/kWh
-latest_live_price = live_prices["price_dkk"].iloc[-1]
+latest_live_price = None
+
+if isinstance(live_prices, pd.DataFrame):
+    if "price_dkk" in live_prices.columns and not live_prices.empty:
+        latest_live_price = live_prices["price_dkk"].iloc[-1]
 
 
 # ------------------------------------------------
@@ -63,25 +66,33 @@ with tab1:
     st.header("Electricity Market Overview")
 
     latest = df.iloc[-1:]
+
     X_latest = latest.drop(columns=["electricity_price", "date"])
 
-    # model output is DKK/MWh
     predicted_mwh = model.predict(X_latest)[0]
 
-    # convert to DKK/kWh
     predicted_kwh = predicted_mwh / 1000
 
     demand = latest["electricity_demand"].values[0]
 
     col1, col2, col3 = st.columns(3)
 
-    col1.metric(
-        "⚡ Live Electricity Price",
-        f"{latest_live_price:.3f} DKK/kWh"
-    )
+    if latest_live_price is not None:
+
+        col1.metric(
+            "⚡ Live Electricity Price",
+            f"{latest_live_price:.3f} DKK/kWh"
+        )
+
+    else:
+
+        col1.metric(
+            "⚡ Live Electricity Price",
+            "Unavailable"
+        )
 
     col2.metric(
-        "📈 Predicted Tomorrow Price",
+        "📈 Predicted Electricity Price",
         f"{predicted_kwh:.3f} DKK/kWh"
     )
 
@@ -90,19 +101,21 @@ with tab1:
         f"{demand:,.0f} MW"
     )
 
-    st.subheader("Live Electricity Prices Today")
+    if isinstance(live_prices, pd.DataFrame) and "price_dkk" in live_prices.columns:
 
-    fig_live = px.line(
-        live_prices,
-        x="timestamp",
-        y="price_dkk",
-        labels={
-            "timestamp": "Time",
-            "price_dkk": "Price (DKK/kWh)"
-        }
-    )
+        st.subheader("Live Electricity Prices")
 
-    st.plotly_chart(fig_live, use_container_width=True)
+        fig_live = px.line(
+            live_prices,
+            x="timestamp",
+            y="price_dkk",
+            labels={
+                "timestamp": "Time",
+                "price_dkk": "Price (DKK/kWh)"
+            }
+        )
+
+        st.plotly_chart(fig_live, use_container_width=True)
 
 
 # =========================================================
@@ -131,7 +144,7 @@ with tab2:
 
     with col1:
 
-        st.subheader("Demand vs Price")
+        st.subheader("Demand vs Electricity Price")
 
         fig_demand = px.scatter(
             df,
@@ -148,7 +161,7 @@ with tab2:
 
     with col2:
 
-        st.subheader("Temperature vs Price")
+        st.subheader("Temperature vs Electricity Price")
 
         fig_temp = px.scatter(
             df,
@@ -184,7 +197,6 @@ with tab3:
 
         predicted_mwh = model.predict(weather_features)[0]
 
-        # convert unit
         predicted_kwh = predicted_mwh / 1000
 
         col1, col2, col3 = st.columns(3)
@@ -204,7 +216,7 @@ with tab3:
             f"{weather_features['wind_speed'].iloc[0]} km/h"
         )
 
-        st.subheader("Weather Features Used for Prediction")
+        st.subheader("Model Input Features")
 
         st.dataframe(weather_features)
 
@@ -237,7 +249,7 @@ with tab4:
 
     st.plotly_chart(fig_hourly, use_container_width=True)
 
-    cheapest = hourly_prices.nsmallest(3, "price_dkk")
+    cheapest = find_cheapest_hours(hourly_prices)
 
     cheapest["hour"] = cheapest["hour"].apply(
         lambda x: f"{(x % 12) or 12} {'AM' if x < 12 else 'PM'}"

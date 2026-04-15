@@ -1,27 +1,15 @@
 import pandas as pd
 
-def find_cheapest_hours(prices, hours_needed=2):
 
-    df = pd.DataFrame({
-        "hour": range(len(prices)),
-        "price": prices
-    })
+def find_cheapest_hours(hourly_prices):
 
-    cheapest = df.sort_values("price").head(hours_needed)
+    # ensure correct columns
+    df = hourly_prices.copy()
+
+    if "price_dkk" not in df.columns:
+        raise ValueError("hourly_prices must contain 'price_dkk' column")
+
+    # sort by price
+    cheapest = df.sort_values("price_dkk").head(3)
 
     return cheapest
-
-
-if __name__ == "__main__":
-
-    # Example predicted hourly prices
-    predicted_prices = [
-        45, 42, 40, 35, 30, 25, 22, 20,
-        21, 23, 27, 32, 36, 39, 41, 44,
-        47, 50, 48, 46, 43, 40, 38, 36
-    ]
-
-    result = find_cheapest_hours(predicted_prices, 3)
-
-    print("Recommended hours:")
-    print(result)

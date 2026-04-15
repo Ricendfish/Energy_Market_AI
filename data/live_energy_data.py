@@ -1,31 +1,28 @@
-import requests
 import pandas as pd
 from datetime import datetime
+from nordpool import elspot
 
 
 def get_live_electricity_price():
 
-    url = "https://api.energy-charts.info/price?bzn=DK1"
+    prices_spot = elspot.Prices()
 
-    response = requests.get(url)
+    data = prices_spot.hourly(
+        areas=["DK1"]
+    )
 
-    print("Status code:", response.status_code)
+    records = []
 
-    data = response.json()
+    today_prices = data["areas"]["DK1"]["values"]
 
-    timestamps = data["unix_seconds"]
-    prices = data["price"]
+    for entry in today_prices:
 
-    rows = []
-
-    for t, p in zip(timestamps, prices):
-
-        rows.append({
-            "timestamp": datetime.utcfromtimestamp(t),
-            "price_dkk": p / 1000
+        records.append({
+            "timestamp": entry["start"],
+            "price_dkk": entry["value"] / 1000
         })
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(records)
 
     return df
 
@@ -34,5 +31,8 @@ if __name__ == "__main__":
 
     df = get_live_electricity_price()
 
-    print("\nLatest electricity prices:\n")
-    print(df.tail(10))
+    if df.empty:
+        print("No electricity price data retrieved")
+    else:
+        print("Latest electricity prices:")
+        print(df.tail())
