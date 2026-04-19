@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import datetime
+from datetime import date
 from nordpool import elspot
 
 
@@ -7,24 +7,37 @@ def get_live_electricity_price():
 
     prices_spot = elspot.Prices()
 
-    data = prices_spot.hourly(
-        areas=["DK1"]
-    )
+    try:
 
-    records = []
+        # request latest available prices
+        data = prices_spot.hourly(
+            areas=["DK1"],
+            end_date=date.today()
+        )
 
-    today_prices = data["areas"]["DK1"]["values"]
+        if data is None:
+            return pd.DataFrame(columns=["timestamp", "price_dkk"])
 
-    for entry in today_prices:
+        records = []
 
-        records.append({
-            "timestamp": entry["start"],
-            "price_dkk": entry["value"] / 1000
-        })
+        values = data["areas"]["DK1"]["values"]
 
-    df = pd.DataFrame(records)
+        for entry in values:
 
-    return df
+            records.append({
+                "timestamp": entry["start"],
+                "price_dkk": entry["value"] / 1000
+            })
+
+        df = pd.DataFrame(records)
+
+        return df
+
+    except Exception as e:
+
+        print("Nordpool API error:", e)
+
+        return pd.DataFrame(columns=["timestamp", "price_dkk"])
 
 
 if __name__ == "__main__":
@@ -34,5 +47,4 @@ if __name__ == "__main__":
     if df.empty:
         print("No electricity price data retrieved")
     else:
-        print("Latest electricity prices:")
         print(df.tail())
