@@ -44,5 +44,3 @@ def get_live_electricity_price():
     if df is not None and not df.empty:
         df.to_csv("data/latest_prices.csv", index=False)
         print("Saved latest electricity prices.")
-    else:
-        print("No electricity price data retrieved")
