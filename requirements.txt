@@ -16,3 +16,4 @@ requests
 scikit-learn
 joblib
 plotly
+nordpool
