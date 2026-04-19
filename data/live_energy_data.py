@@ -12,34 +12,20 @@ def get_live_electricity_price():
             end_date=date.today()
         )
 
-        if data is None:
-            print("Nordpool returned no data.")
-            return pd.DataFrame()
+        if data and "areas" in data and "DK1" in data["areas"]:
+            values = data["areas"]["DK1"]["values"]
 
-        if "areas" not in data:
-            print("Unexpected Nordpool format.")
-            return pd.DataFrame()
+            records = []
 
-        values = data["areas"]["DK1"]["values"]
-
-        if values is None or len(values) == 0:
-            print("No electricity price values returned.")
-            return pd.DataFrame()
-
-        records = []
-
-        for entry in values:
-            try:
+            for entry in values:
                 records.append({
                     "timestamp": entry["start"],
                     "price_dkk": entry["value"] / 1000
                 })
-            except Exception:
-                continue
 
-        df = pd.DataFrame(records)
+            return pd.DataFrame(records)
 
-        return df
+        return pd.DataFrame()
 
     except Exception as e:
         print("Nordpool API error:", e)
@@ -52,8 +38,11 @@ if __name__ == "__main__":
 
     df = get_live_electricity_price()
 
-    if df is not None and not df.empty:
-        df.to_csv("data/latest_prices.csv", index=False)
-        print("Saved latest electricity prices.")
-    else:
+    # ALWAYS create the file
+    if df is None or df.empty:
         print("No electricity price data retrieved.")
+        df = pd.DataFrame(columns=["timestamp", "price_dkk"])
+
+    df.to_csv("data/latest_prices.csv", index=False)
+
+    print("latest_prices.csv written successfully")
