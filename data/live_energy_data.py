@@ -5,22 +5,21 @@ from nordpool import elspot
 
 def get_live_electricity_price():
 
-    prices_spot = elspot.Prices()
-
     try:
 
-        # request latest available prices
+        prices_spot = elspot.Prices()
+
         data = prices_spot.hourly(
             areas=["DK1"],
             end_date=date.today()
         )
 
-        if data is None:
+        if not data or "areas" not in data:
             return pd.DataFrame(columns=["timestamp", "price_dkk"])
 
-        records = []
-
         values = data["areas"]["DK1"]["values"]
+
+        records = []
 
         for entry in values:
 
@@ -35,16 +34,6 @@ def get_live_electricity_price():
 
     except Exception as e:
 
-        print("Nordpool API error:", e)
+        print("Nordpool API failure:", e)
 
         return pd.DataFrame(columns=["timestamp", "price_dkk"])
-
-
-if __name__ == "__main__":
-
-    df = get_live_electricity_price()
-
-    if df.empty:
-        print("No electricity price data retrieved")
-    else:
-        print(df.tail())
