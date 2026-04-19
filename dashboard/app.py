@@ -36,7 +36,15 @@ df["date"] = pd.to_datetime(df["date"])
 
 model = joblib.load("models/electricity_price_model.pkl")
 
-live_prices = get_live_electricity_price()
+
+# ------------------------------------------------
+# LOAD LIVE DATA
+# ------------------------------------------------
+
+try:
+    live_prices = get_live_electricity_price()
+except:
+    live_prices = None
 
 latest_live_price = None
 
@@ -70,7 +78,6 @@ with tab1:
     X_latest = latest.drop(columns=["electricity_price", "date"])
 
     predicted_mwh = model.predict(X_latest)[0]
-
     predicted_kwh = predicted_mwh / 1000
 
     demand = latest["electricity_demand"].values[0]
@@ -101,21 +108,27 @@ with tab1:
         f"{demand:,.0f} MW"
     )
 
-    if isinstance(live_prices, pd.DataFrame) and "price_dkk" in live_prices.columns:
+    if isinstance(live_prices, pd.DataFrame):
 
-        st.subheader("Live Electricity Prices")
+        if "timestamp" in live_prices.columns and "price_dkk" in live_prices.columns:
 
-        fig_live = px.line(
-            live_prices,
-            x="timestamp",
-            y="price_dkk",
-            labels={
-                "timestamp": "Time",
-                "price_dkk": "Price (DKK/kWh)"
-            }
-        )
+            st.subheader("Live Electricity Prices")
 
-        st.plotly_chart(fig_live, use_container_width=True)
+            fig_live = px.line(
+                live_prices,
+                x="timestamp",
+                y="price_dkk",
+                labels={
+                    "timestamp": "Time",
+                    "price_dkk": "Price (DKK/kWh)"
+                }
+            )
+
+            st.plotly_chart(fig_live, use_container_width=True)
+
+        else:
+
+            st.info("Live price data currently unavailable.")
 
 
 # =========================================================
@@ -196,7 +209,6 @@ with tab3:
     if weather_features is not None:
 
         predicted_mwh = model.predict(weather_features)[0]
-
         predicted_kwh = predicted_mwh / 1000
 
         col1, col2, col3 = st.columns(3)
@@ -233,28 +245,45 @@ with tab4:
 
     st.header("Cheapest Electricity Hours")
 
-    live_prices["hour"] = pd.to_datetime(live_prices["timestamp"]).dt.hour
+    if isinstance(live_prices, pd.DataFrame):
 
-    hourly_prices = live_prices.groupby("hour")["price_dkk"].mean().reset_index()
+        if "timestamp" in live_prices.columns and "price_dkk" in live_prices.columns:
 
-    fig_hourly = px.bar(
-        hourly_prices,
-        x="hour",
-        y="price_dkk",
-        labels={
-            "hour": "Hour",
-            "price_dkk": "Price (DKK/kWh)"
-        }
-    )
+            live_prices["hour"] = pd.to_datetime(live_prices["timestamp"]).dt.hour
 
-    st.plotly_chart(fig_hourly, use_container_width=True)
+            hourly_prices = (
+                live_prices
+                .groupby("hour")["price_dkk"]
+                .mean()
+                .reset_index()
+            )
 
-    cheapest = find_cheapest_hours(hourly_prices)
+            fig_hourly = px.bar(
+                hourly_prices,
+                x="hour",
+                y="price_dkk",
+                labels={
+                    "hour": "Hour",
+                    "price_dkk": "Price (DKK/kWh)"
+                }
+            )
 
-    cheapest["hour"] = cheapest["hour"].apply(
-        lambda x: f"{(x % 12) or 12} {'AM' if x < 12 else 'PM'}"
-    )
+            st.plotly_chart(fig_hourly, use_container_width=True)
 
-    st.subheader("Recommended Cheapest Hours")
+            cheapest = find_cheapest_hours(hourly_prices)
 
-    st.dataframe(cheapest)
+            cheapest["hour"] = cheapest["hour"].apply(
+                lambda x: f"{(x % 12) or 12} {'AM' if x < 12 else 'PM'}"
+            )
+
+            st.subheader("Recommended Cheapest Hours")
+
+            st.dataframe(cheapest)
+
+        else:
+
+            st.warning("Live electricity prices unavailable.")
+
+    else:
+
+        st.warning("Live electricity prices unavailable.")
