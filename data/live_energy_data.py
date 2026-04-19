@@ -37,3 +37,12 @@ def get_live_electricity_price():
         print("Nordpool API failure:", e)
 
         return pd.DataFrame(columns=["timestamp", "price_dkk"])
+    if __name__ == "__main__":
+
+    df = get_live_electricity_price()
+
+    if df is not None and not df.empty:
+        df.to_csv("data/latest_prices.csv", index=False)
+        print("Saved latest electricity prices.")
+    else:
+        print("No electricity price data retrieved")
