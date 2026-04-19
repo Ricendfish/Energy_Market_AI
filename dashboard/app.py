@@ -1,6 +1,7 @@
 import sys
 import os
 
+# allow imports from project root
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import streamlit as st
@@ -10,9 +11,7 @@ import joblib
 from datetime import date, timedelta
 
 from optimization.energy_optimizer import find_cheapest_hours
-from data.live_energy_data import get_live_electricity_price
 from data.live_weather import get_weather_features
-
 
 # ------------------------------------------------
 # PAGE CONFIG
@@ -26,32 +25,43 @@ st.set_page_config(
 st.title("⚡ AI Electricity Cost Optimizer")
 st.caption("Electricity prices sourced from the Nord Pool wholesale electricity market for Denmark.")
 
+# ------------------------------------------------
+# FILE PATHS
+# ------------------------------------------------
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+DATA_PATH = os.path.join(BASE_DIR, "data", "final_dataset.csv")
+LIVE_PRICE_PATH = os.path.join(BASE_DIR, "data", "latest_prices.csv")
+MODEL_PATH = os.path.join(BASE_DIR, "models", "electricity_price_model.pkl")
 
 # ------------------------------------------------
 # LOAD DATA
 # ------------------------------------------------
 
-df = pd.read_csv("data/final_dataset.csv")
+df = pd.read_csv(DATA_PATH)
 df["date"] = pd.to_datetime(df["date"])
 
-model = joblib.load("models/electricity_price_model.pkl")
-
+model = joblib.load(MODEL_PATH)
 
 # ------------------------------------------------
-# LOAD LIVE DATA
+# LOAD LIVE PRICES FROM CSV
 # ------------------------------------------------
 
-try:
-    live_prices = get_live_electricity_price()
-except:
-    live_prices = None
-
+live_prices = None
 latest_live_price = None
 
-if isinstance(live_prices, pd.DataFrame):
-    if "price_dkk" in live_prices.columns and not live_prices.empty:
-        latest_live_price = live_prices["price_dkk"].iloc[-1]
+if os.path.exists(LIVE_PRICE_PATH):
 
+    live_prices = pd.read_csv(LIVE_PRICE_PATH)
+
+    if not live_prices.empty:
+
+        if "timestamp" in live_prices.columns:
+            live_prices["timestamp"] = pd.to_datetime(live_prices["timestamp"]).dt.tz_localize(None)
+
+        if "price_dkk" in live_prices.columns:
+            latest_live_price = live_prices["price_dkk"].iloc[-1]
 
 # ------------------------------------------------
 # NAVIGATION
@@ -63,7 +73,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "Prediction Tool",
     "Optimization"
 ])
-
 
 # =========================================================
 # OVERVIEW
@@ -112,7 +121,7 @@ with tab1:
 
         if "timestamp" in live_prices.columns and "price_dkk" in live_prices.columns:
 
-            st.subheader("Live Electricity Prices")
+            st.subheader("Today's Electricity Prices")
 
             fig_live = px.line(
                 live_prices,
@@ -125,11 +134,6 @@ with tab1:
             )
 
             st.plotly_chart(fig_live, use_container_width=True)
-
-        else:
-
-            st.info("Live price data currently unavailable.")
-
 
 # =========================================================
 # MARKET ANALYSIS
@@ -189,7 +193,6 @@ with tab2:
 
         st.plotly_chart(fig_temp, use_container_width=True)
 
-
 # =========================================================
 # PREDICTION TOOL
 # =========================================================
@@ -236,7 +239,6 @@ with tab3:
 
         st.warning("Weather data unavailable for this date.")
 
-
 # =========================================================
 # OPTIMIZATION
 # =========================================================
@@ -251,12 +253,7 @@ with tab4:
 
             live_prices["hour"] = pd.to_datetime(live_prices["timestamp"]).dt.hour
 
-            hourly_prices = (
-                live_prices
-                .groupby("hour")["price_dkk"]
-                .mean()
-                .reset_index()
-            )
+            hourly_prices = live_prices.groupby("hour")["price_dkk"].mean().reset_index()
 
             fig_hourly = px.bar(
                 hourly_prices,
