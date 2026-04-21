@@ -108,7 +108,7 @@ title: Energy Market AI
 emoji: 🏆
 colorFrom: gray
 colorTo: gray
-sdk: gradio
+sdk: streamlit
 sdk_version: 6.13.0
 app_file: app.py
 pinned: false
