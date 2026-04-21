@@ -110,7 +110,7 @@ colorFrom: gray
 colorTo: gray
 sdk: streamlit
 sdk_version: 6.13.0
-app_file: app.py
+app_file: dashboard/app.py
 pinned: false
 license: mit
 ---
