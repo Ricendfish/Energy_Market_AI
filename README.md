@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ⚡ AI Electricity Cost Optimizer
 
 An end-to-end data science application that analyzes electricity market data and predicts optimal times to use electricity based on price trends and weather conditions.
@@ -101,3 +102,18 @@ A scheduled **GitHub Actions workflow** runs the machine learning pipeline autom
 * GitHub Actions
 
 
+=======
+---
+title: Energy Market AI
+emoji: 🏆
+colorFrom: gray
+colorTo: gray
+sdk: gradio
+sdk_version: 6.13.0
+app_file: app.py
+pinned: false
+license: mit
+---
+
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+>>>>>>> 34818a7 (initial commit)
