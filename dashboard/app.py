@@ -6,12 +6,13 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import joblib
+import requests
 from datetime import date, timedelta
 
 from optimization.energy_optimizer import find_cheapest_hours
 from data.live_weather import get_weather_features
 from database.db_manager import load_market_data, load_latest_prices
+
 
 # ------------------------------------------------
 # PAGE CONFIG
@@ -25,6 +26,7 @@ st.set_page_config(
 st.title("⚡ AI Electricity Cost Optimizer")
 st.caption("Electricity prices sourced from the Nord Pool wholesale electricity market for Denmark.")
 
+
 # ------------------------------------------------
 # FILE PATHS
 # ------------------------------------------------
@@ -33,13 +35,9 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
 DATA_PATH = os.path.join(BASE_DIR, "data", "final_dataset.csv")
 LIVE_PRICE_PATH = os.path.join(BASE_DIR, "data", "latest_prices.csv")
-MODEL_PATH = os.path.join(BASE_DIR, "models", "electricity_price_model.pkl")
 
-# ------------------------------------------------
-# LOAD MODEL
-# ------------------------------------------------
+API_URL = "http://localhost:8000/predict"
 
-model = joblib.load(MODEL_PATH)
 
 # ------------------------------------------------
 # LOAD HISTORICAL DATA
@@ -51,6 +49,7 @@ except:
     df = pd.read_csv(DATA_PATH)
 
 df["date"] = pd.to_datetime(df["date"])
+
 
 # ------------------------------------------------
 # LOAD LIVE PRICES (DATABASE FIRST)
@@ -72,6 +71,7 @@ try:
 
 except:
     live_prices = None
+
 
 # ------------------------------------------------
 # CSV FALLBACK IF DB FAILS
@@ -96,12 +96,14 @@ if live_prices is None or live_prices.empty:
         except:
             live_prices = None
 
+
 # ------------------------------------------------
 # FINAL FALLBACK
 # ------------------------------------------------
 
 if latest_live_price_kwh is None:
     latest_live_price_kwh = df["electricity_price"].iloc[-1] / 1000
+
 
 # ------------------------------------------------
 # MARKET SCALING
@@ -110,6 +112,7 @@ if latest_live_price_kwh is None:
 historical_avg = df["electricity_price"].mean()
 live_mwh_price = latest_live_price_kwh * 1000
 market_scale_factor = live_mwh_price / historical_avg
+
 
 # ------------------------------------------------
 # NAVIGATION
@@ -121,6 +124,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "Prediction Tool",
     "Optimization"
 ])
+
 
 # =========================================================
 # OVERVIEW
@@ -141,11 +145,29 @@ with tab1:
         weather_today["day_of_year"] = today.timetuple().tm_yday
         weather_today["electricity_demand"] = 4000
 
-        predicted_mwh = model.predict(weather_today)[0]
+        try:
+
+            payload = {
+                "temperature": float(weather_today["temperature"].iloc[0]),
+                "wind_speed": float(weather_today["wind_speed"].iloc[0]),
+                "electricity_demand": 4000,
+                "day_of_week": int(weather_today["day_of_week"].iloc[0]),
+                "month": int(weather_today["month"].iloc[0]),
+                "day_of_year": int(weather_today["day_of_year"].iloc[0])
+            }
+
+            response = requests.post(API_URL, json=payload)
+
+            predicted_mwh = response.json()["predicted_price_mwh"]
+
+        except:
+
+            predicted_mwh = df["electricity_price"].iloc[-1]
 
     else:
 
         predicted_mwh = df["electricity_price"].iloc[-1]
+
 
     predicted_mwh = predicted_mwh * market_scale_factor
     predicted_kwh = predicted_mwh / 1000
@@ -184,6 +206,7 @@ with tab1:
         )
 
         st.plotly_chart(fig_live, use_container_width=True)
+
 
 # =========================================================
 # MARKET ANALYSIS
@@ -243,6 +266,7 @@ with tab2:
 
         st.plotly_chart(fig_temp, use_container_width=True)
 
+
 # =========================================================
 # PREDICTION TOOL
 # =========================================================
@@ -266,7 +290,25 @@ with tab3:
         weather_features["day_of_year"] = selected_date.timetuple().tm_yday
         weather_features["electricity_demand"] = 4000
 
-        predicted_mwh = model.predict(weather_features)[0]
+        try:
+
+            payload = {
+                "temperature": float(weather_features["temperature"].iloc[0]),
+                "wind_speed": float(weather_features["wind_speed"].iloc[0]),
+                "electricity_demand": 4000,
+                "day_of_week": int(weather_features["day_of_week"].iloc[0]),
+                "month": int(weather_features["month"].iloc[0]),
+                "day_of_year": int(weather_features["day_of_year"].iloc[0])
+            }
+
+            response = requests.post(API_URL, json=payload)
+
+            predicted_mwh = response.json()["predicted_price_mwh"]
+
+        except:
+
+            predicted_mwh = df["electricity_price"].iloc[-1]
+
 
         predicted_mwh = predicted_mwh * market_scale_factor
         predicted_kwh = predicted_mwh / 1000
@@ -290,6 +332,7 @@ with tab3:
 
     else:
         st.warning("Weather data unavailable for this date.")
+
 
 # =========================================================
 # OPTIMIZATION
