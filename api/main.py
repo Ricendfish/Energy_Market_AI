@@ -11,3 +11,18 @@ model = load_model()
 @app.get("/health")
 def health():
     return {"status": "ok"}
+@app.post("/predict")
+def predict(data: PredictionRequest):
+
+    features = np.array([[
+        data.temperature,
+        data.wind_speed,
+        data.electricity_demand,
+        data.day_of_week,
+        data.month,
+        data.day_of_year
+    ]])
+
+    prediction = model.predict(features)[0]
+
+    return {"predicted_price": float(prediction)}
