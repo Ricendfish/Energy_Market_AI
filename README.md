@@ -10,7 +10,7 @@ The system integrates weather signals, electricity demand data, and electricity 
 
 Access the interactive dashboard here:
 
-https://energy-market-ai.onrender.com/
+https://ricendfish.github.io/Energy_Market_AI/
 
 The dashboard provides:
 
