@@ -3,7 +3,15 @@ import sqlite3
 DB_PATH = "database/energy_market.db"
 
 conn = sqlite3.connect(DB_PATH)
+
 cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS latest_prices (
+    timestamp TEXT,
+    price_dkk REAL
+)
+""")
 
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS energy_market_data (
@@ -18,14 +26,7 @@ CREATE TABLE IF NOT EXISTS energy_market_data (
 )
 """)
 
-cursor.execute("""
-CREATE TABLE IF NOT EXISTS latest_prices (
-    timestamp TEXT,
-    price_dkk REAL
-)
-""")
-
 conn.commit()
 conn.close()
 
-print("Database initialized.")
+print("Database initialized")
