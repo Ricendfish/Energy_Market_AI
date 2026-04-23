@@ -36,63 +36,80 @@ LIVE_PRICE_PATH = os.path.join(BASE_DIR, "data", "latest_prices.csv")
 MODEL_PATH = os.path.join(BASE_DIR, "models", "electricity_price_model.pkl")
 
 # ------------------------------------------------
-# LOAD DATA FROM DATABASE
+# LOAD MODEL
 # ------------------------------------------------
 
-df = load_market_data()
+model = joblib.load(MODEL_PATH)
+
+# ------------------------------------------------
+# LOAD HISTORICAL DATA
+# ------------------------------------------------
+
+try:
+    df = load_market_data()
+except:
+    df = pd.read_csv(DATA_PATH)
 
 df["date"] = pd.to_datetime(df["date"])
 
-live_prices = load_latest_prices()
-
-latest_live_price = None
-
-if not live_prices.empty:
-    latest_live_price = live_prices["price_dkk"].iloc[-1]
-
 # ------------------------------------------------
-# LOAD LIVE PRICES
+# LOAD LIVE PRICES (DATABASE FIRST)
 # ------------------------------------------------
 
 live_prices = None
 latest_live_price_kwh = None
 
-if os.path.exists(LIVE_PRICE_PATH):
+try:
 
-    try:
+    live_prices = load_latest_prices()
 
-        live_prices = pd.read_csv(LIVE_PRICE_PATH)
+    if live_prices is not None and not live_prices.empty:
 
-        if not live_prices.empty:
+        live_prices["timestamp"] = pd.to_datetime(live_prices["timestamp"])
+        live_prices["price_kwh"] = live_prices["price_dkk"] / 1000
 
-            live_prices["timestamp"] = pd.to_datetime(live_prices["timestamp"], errors="coerce")
+        latest_live_price_kwh = live_prices["price_kwh"].iloc[-1]
 
-            # convert MWh → kWh
+except:
+    live_prices = None
+
+# ------------------------------------------------
+# CSV FALLBACK IF DB FAILS
+# ------------------------------------------------
+
+if live_prices is None or live_prices.empty:
+
+    if os.path.exists(LIVE_PRICE_PATH):
+
+        try:
+
+            live_prices = pd.read_csv(LIVE_PRICE_PATH)
+
+            live_prices["timestamp"] = pd.to_datetime(
+                live_prices["timestamp"], errors="coerce"
+            )
+
             live_prices["price_kwh"] = live_prices["price_dkk"] / 1000
 
             latest_live_price_kwh = live_prices["price_kwh"].iloc[-1]
 
-    except Exception:
-        live_prices = None
+        except:
+            live_prices = None
 
+# ------------------------------------------------
+# FINAL FALLBACK
+# ------------------------------------------------
 
-# fallback if live data missing
 if latest_live_price_kwh is None:
     latest_live_price_kwh = df["electricity_price"].iloc[-1] / 1000
 
-
 # ------------------------------------------------
-# MARKET SCALING ADJUSTMENT
+# MARKET SCALING
 # ------------------------------------------------
-
-# Historical dataset is 2020, modern prices are higher
-# We scale predictions relative to current market
 
 historical_avg = df["electricity_price"].mean()
 live_mwh_price = latest_live_price_kwh * 1000
-
 market_scale_factor = live_mwh_price / historical_avg
-
 
 # ------------------------------------------------
 # NAVIGATION
@@ -104,7 +121,6 @@ tab1, tab2, tab3, tab4 = st.tabs([
     "Prediction Tool",
     "Optimization"
 ])
-
 
 # =========================================================
 # OVERVIEW
@@ -123,8 +139,6 @@ with tab1:
         weather_today["day_of_week"] = today.weekday()
         weather_today["month"] = today.month
         weather_today["day_of_year"] = today.timetuple().tm_yday
-
-        # approximate demand
         weather_today["electricity_demand"] = 4000
 
         predicted_mwh = model.predict(weather_today)[0]
@@ -133,9 +147,7 @@ with tab1:
 
         predicted_mwh = df["electricity_price"].iloc[-1]
 
-    # apply market scaling
     predicted_mwh = predicted_mwh * market_scale_factor
-
     predicted_kwh = predicted_mwh / 1000
 
     demand = 4000
@@ -172,7 +184,6 @@ with tab1:
         )
 
         st.plotly_chart(fig_live, use_container_width=True)
-
 
 # =========================================================
 # MARKET ANALYSIS
@@ -232,7 +243,6 @@ with tab2:
 
         st.plotly_chart(fig_temp, use_container_width=True)
 
-
 # =========================================================
 # PREDICTION TOOL
 # =========================================================
@@ -254,22 +264,16 @@ with tab3:
         weather_features["day_of_week"] = selected_date.weekday()
         weather_features["month"] = selected_date.month
         weather_features["day_of_year"] = selected_date.timetuple().tm_yday
-
         weather_features["electricity_demand"] = 4000
 
         predicted_mwh = model.predict(weather_features)[0]
 
-        # scale to modern market
         predicted_mwh = predicted_mwh * market_scale_factor
-
         predicted_kwh = predicted_mwh / 1000
 
         col1, col2, col3 = st.columns(3)
 
-        col1.metric(
-            "Predicted Price",
-            f"{predicted_kwh:.3f} DKK/kWh"
-        )
+        col1.metric("Predicted Price", f"{predicted_kwh:.3f} DKK/kWh")
 
         col2.metric(
             "Temperature",
@@ -282,13 +286,10 @@ with tab3:
         )
 
         st.subheader("Model Input Features")
-
         st.dataframe(weather_features)
 
     else:
-
         st.warning("Weather data unavailable for this date.")
-
 
 # =========================================================
 # OPTIMIZATION
@@ -323,9 +324,7 @@ with tab4:
         )
 
         st.subheader("Recommended Cheapest Hours")
-
         st.dataframe(cheapest)
 
     else:
-
         st.warning("Live electricity prices unavailable.")
