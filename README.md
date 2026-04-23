@@ -1,119 +1,44 @@
-<<<<<<< HEAD
 # ⚡ AI Electricity Cost Optimizer
 
-An end-to-end data science application that analyzes electricity market data and predicts optimal times to use electricity based on price trends and weather conditions.
+An AI-powered energy market analytics system designed to analyze electricity price patterns in the Danish energy market and provide intelligent insights for electricity usage and pricing trends.
+
+The system integrates weather signals, electricity demand data, and electricity market prices to predict price movements and recommend optimal electricity usage periods.
+
+---
 
 ## 🌐 Live Dashboard
 
-Access the live application here:
+Access the interactive dashboard here:
 
-https://energymarketai-mdlpk9mvffqevtw5prxpum.streamlit.app/
+https://energy-market-ai.onrender.com/
 
-The dashboard allows users to:
+The dashboard provides:
 
-* View historical electricity market data
-* Explore energy demand and price trends
-* Analyze the relationship between weather and electricity demand
-* Predict electricity prices for selected dates
-* Identify the cheapest hours to run appliances
+- Real-time electricity price visualization
+- Electricity price prediction using machine learning
+- Market analysis and exploratory data analysis
+- Cheapest electricity usage hour recommendations
 
-## 📊 Project Overview
-
-Electricity prices fluctuate depending on market demand, weather conditions, and generation sources. This project builds a machine learning pipeline to analyze these patterns and provide actionable insights for electricity consumption.
-
-The system integrates real-time market data, weather information, and machine learning models to help users optimize their electricity usage.
-
-## ⚙️ System Architecture
-
-```
-Electricity Market Data + Weather Data
-                 ↓
-           Data Pipeline
-                 ↓
-       Feature Engineering
-                 ↓
-      Machine Learning Models
-                 ↓
-        Optimization Engine
-                 ↓
-        Streamlit Dashboard
-```
-
-## 🤖 Machine Learning Pipeline
-
-The automated pipeline performs:
-
-1. Data ingestion from electricity market APIs and weather sources
-2. Data cleaning and preprocessing
-3. Feature engineering (seasonality, weather indicators, time variables)
-4. Model training and evaluation
-5. Electricity price prediction
-
-The pipeline is automated using **GitHub Actions**, allowing the model to update regularly.
-
-## 📈 Dashboard Features
-
-* Electricity price trend analysis
-* Demand vs electricity price exploration
-* Weather impact on electricity demand
-* Price prediction for selected dates
-* Appliance usage optimization recommendations
-
-## 🐳 Docker Deployment
-
-The project is containerized using Docker.
-
-Build the image:
-
-```
-docker build -t energy-ai:1.0 .
-```
-
-Run the container:
-
-```
-docker run --name energy-ai-demo -p 8501:8501 energy-ai:1.0
-```
-
-Then open:
-
-```
-http://localhost:8501
-```
-
-## 🔄 Automation
-
-A scheduled **GitHub Actions workflow** runs the machine learning pipeline automatically to:
-
-* Fetch updated data
-* Retrain the model
-* Refresh predictions
-
-## 🧰 Tech Stack
-
-* Python
-* Streamlit
-* Pandas
-* Scikit-learn
-* XGBoost
-* Plotly
-* Meteostat Weather API
-* Docker
-* GitHub Actions
-
-
-=======
----
-title: Energy Market AI
-emoji: 🏆
-colorFrom: gray
-colorTo: gray
-sdk: streamlit
-sdk_version: 6.13.0
-app_file: dashboard/app.py
-pinned: false
-license: mit
 ---
 
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
->>>>>>> 34818a7 (initial commit)
+## 🎯 Project Objective
+
+Electricity prices in Denmark fluctuate significantly due to factors such as:
+
+- Renewable energy production (especially wind)
+- Weather conditions
+- Electricity demand
+- Energy market supply dynamics
+
+This project aims to analyze these factors and build a system that can:
+
+1. Predict electricity prices using machine learning
+2. Visualize energy market trends
+3. Recommend optimal electricity usage periods
+4. Provide insights into energy market behavior
+
+---
+
+## 🧠 System Architecture
+
+The project follows a complete machine learning pipeline architecture.
