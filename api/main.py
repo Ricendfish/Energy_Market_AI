@@ -1,37 +1,70 @@
-from fastapi import FastAPI
-import numpy as np
+import os
+import sys
 import sqlite3
+import numpy as np
+import joblib
+from fastapi import FastAPI
+from pydantic import BaseModel
 
-from api.schemas import PredictionRequest
-from api.model_loader import load_model
+# ------------------------------------------------
+# PATH SETUP
+# ------------------------------------------------
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(BASE_DIR)
+
+MODEL_PATH = os.path.join(BASE_DIR, "models", "electricity_price_model.pkl")
+
+# ------------------------------------------------
+# LOAD MODEL
+# ------------------------------------------------
+
+model = joblib.load(MODEL_PATH)
+
+# ------------------------------------------------
+# FASTAPI APP
+# ------------------------------------------------
 
 app = FastAPI(
     title="Energy Market AI API",
-    description="API for electricity price prediction and market data",
+    description="Electricity price prediction API",
     version="1.0"
 )
 
-# Load ML model at startup
-model = load_model()
+# ------------------------------------------------
+# REQUEST SCHEMA
+# ------------------------------------------------
+
+class PredictionRequest(BaseModel):
+
+    temperature: float
+    wind_speed: float
+    electricity_demand: float
+    day_of_week: int
+    month: int
+    day_of_year: int
 
 
-# -------------------------------
-# Health Check Endpoint
-# -------------------------------
+# ------------------------------------------------
+# HEALTH CHECK
+# ------------------------------------------------
 
 @app.get("/health")
-def health_check():
+
+def health():
+
     return {
         "status": "ok",
         "service": "Energy Market AI API"
     }
 
 
-# -------------------------------
-# Prediction Endpoint
-# -------------------------------
+# ------------------------------------------------
+# PRICE PREDICTION
+# ------------------------------------------------
 
 @app.post("/predict")
+
 def predict_price(data: PredictionRequest):
 
     features = np.array([[
@@ -46,18 +79,27 @@ def predict_price(data: PredictionRequest):
     prediction = model.predict(features)[0]
 
     return {
-        "predicted_price": float(prediction)
+        "predicted_price_mwh": float(prediction),
+        "predicted_price_kwh": float(prediction / 1000)
     }
 
 
-# -------------------------------
-# Latest Market Prices Endpoint
-# -------------------------------
+# ------------------------------------------------
+# LATEST MARKET PRICES
+# ------------------------------------------------
 
 @app.get("/prices/latest")
-def get_latest_prices():
 
-    conn = sqlite3.connect("energy_market.db")
+def latest_prices():
+
+    db_path = os.path.join(BASE_DIR, "energy_market.db")
+
+    if not os.path.exists(db_path):
+
+        return {"error": "database not found"}
+
+    conn = sqlite3.connect(db_path)
+
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -72,9 +114,11 @@ def get_latest_prices():
     results = []
 
     for r in rows:
+
         results.append({
             "timestamp": r[0],
-            "price_dkk": r[1]
+            "price_dkk": r[1],
+            "price_kwh": r[1] / 1000
         })
 
     conn.close()
