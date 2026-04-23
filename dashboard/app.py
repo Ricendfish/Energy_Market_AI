@@ -11,6 +11,7 @@ from datetime import date, timedelta
 
 from optimization.energy_optimizer import find_cheapest_hours
 from data.live_weather import get_weather_features
+from database.db_manager import load_market_data, load_latest_prices
 
 # ------------------------------------------------
 # PAGE CONFIG
@@ -35,13 +36,19 @@ LIVE_PRICE_PATH = os.path.join(BASE_DIR, "data", "latest_prices.csv")
 MODEL_PATH = os.path.join(BASE_DIR, "models", "electricity_price_model.pkl")
 
 # ------------------------------------------------
-# LOAD DATA
+# LOAD DATA FROM DATABASE
 # ------------------------------------------------
 
-df = pd.read_csv(DATA_PATH)
+df = load_market_data()
+
 df["date"] = pd.to_datetime(df["date"])
 
-model = joblib.load(MODEL_PATH)
+live_prices = load_latest_prices()
+
+latest_live_price = None
+
+if not live_prices.empty:
+    latest_live_price = live_prices["price_dkk"].iloc[-1]
 
 # ------------------------------------------------
 # LOAD LIVE PRICES
