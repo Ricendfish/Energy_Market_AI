@@ -2,9 +2,12 @@ import pandas as pd
 from nordpool import elspot
 from datetime import datetime
 import os
+import sqlite3
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 SAVE_PATH = os.path.join(BASE_DIR, "data", "latest_prices.csv")
+DB_PATH = os.path.join(BASE_DIR, "database", "energy_market.db")
 
 
 def get_live_electricity_price():
@@ -33,14 +36,39 @@ def get_live_electricity_price():
         return None
 
 
+def save_prices_to_csv(df):
+
+    df.to_csv(SAVE_PATH, index=False)
+    print("latest_prices.csv written successfully")
+
+
+def save_prices_to_db(df):
+
+    conn = sqlite3.connect(DB_PATH)
+
+    df.to_sql(
+        "latest_prices",
+        conn,
+        if_exists="replace",
+        index=False
+    )
+
+    conn.close()
+
+    print("Latest prices saved to database")
+
+
 def save_prices():
 
     df = get_live_electricity_price()
 
     if df is not None and not df.empty:
 
-        df.to_csv(SAVE_PATH, index=False)
-        print("latest_prices.csv written successfully")
+        # Save CSV (backup / compatibility)
+        save_prices_to_csv(df)
+
+        # Save to database
+        save_prices_to_db(df)
 
     else:
 
